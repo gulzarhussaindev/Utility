@@ -1,22 +1,33 @@
+/* =========================================================
+   UOL Staff Directory – Admin Import Panel (FLAT MODE)
+   Author: Gulzar Hussain
+========================================================= */
+
 const REQUIRED_FILENAME = "UOL_Staff_Master.csv";
 
 let mergedDB = [];
-let activeCampus = null;
-let activeDepartment = "All";
 let unlocked = false;
+let firstCleanImport = false;
 
+/* =========================
+   DOM
+========================= */
 const csvInput = document.getElementById("csvInput");
 const submitBtn = document.getElementById("submitBtn");
 const exportJsonBtn = document.getElementById("exportJsonBtn");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
+const activateAllBtn = document.getElementById("activateAllBtn");
+const deactivateAllBtn = document.getElementById("deactivateAllBtn");
 
 csvInput.addEventListener("change", handleUpload);
 submitBtn.addEventListener("click", handleSubmit);
 exportJsonBtn.addEventListener("click", exportJSON);
 exportCsvBtn.addEventListener("click", exportCSV);
+activateAllBtn.addEventListener("click", () => bulkStatus(true));
+deactivateAllBtn.addEventListener("click", () => bulkStatus(false));
 
 /* =========================
-   UPLOAD HANDLER
+   UPLOAD
 ========================= */
 async function handleUpload() {
   const file = csvInput.files[0];
@@ -27,23 +38,28 @@ async function handleUpload() {
 
   try {
     const text = await file.text();
-    const rows = text
-      .trim()
-      .split("\n")
-      .map(r => r.split(","));
+    const rows = text.trim().split("\n").map(r => r.split(","));
 
     await loadDB();
+
+    if (mergedDB.length === 0) {
+      firstCleanImport = true;
+      mergedDB = [];
+    }
+
     mergeCSV(rows);
 
     unlocked = true;
     submitBtn.disabled = false;
     exportJsonBtn.classList.remove("hidden");
     exportCsvBtn.classList.remove("hidden");
+    activateAllBtn.classList.remove("hidden");
+    deactivateAllBtn.classList.remove("hidden");
 
     document.getElementById("uploadGate").classList.add("hidden");
     document.getElementById("adminApp").classList.remove("hidden");
 
-    initUI();
+    renderAllCards();
   } catch (e) {
     console.error(e);
     triggerInternalError();
@@ -51,23 +67,28 @@ async function handleUpload() {
 }
 
 /* =========================
-   LOAD EXISTING DATABASE
+   LOAD DB
 ========================= */
 async function loadDB() {
-  const res = await fetch("data/staff.json");
-  mergedDB = await res.json();
+  try {
+    const res = await fetch("data/staff.json");
+    const data = await res.json();
+    mergedDB = Array.isArray(data) ? data : [];
+  } catch {
+    mergedDB = [];
+  }
 }
 
 /* =========================
-   CSV MERGE (ROBUST)
+   MERGE CSV
 ========================= */
 function mergeCSV(rows) {
   if (!rows || rows.length < 2) triggerInternalError();
 
   const headers = rows[0].map(h => h.trim().toLowerCase());
-  const idx = name => headers.indexOf(name);
+  const idx = n => headers.indexOf(n);
 
-  const REQUIRED_COLUMNS = [
+  const REQUIRED = [
     "campus",
     "department",
     "full name",
@@ -78,20 +99,15 @@ function mergeCSV(rows) {
     "status"
   ];
 
-  for (const col of REQUIRED_COLUMNS) {
-    if (idx(col) === -1) triggerInternalError();
-  }
+  REQUIRED.forEach(c => {
+    if (idx(c) === -1) triggerInternalError();
+  });
 
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
     const email = (r[idx("official email")] || "").trim();
     if (!email) return;
-
-    const statusRaw = (r[idx("status")] || "active")
-      .toString()
-      .trim()
-      .toLowerCase();
 
     const rec = {
       campus: (r[idx("campus")] || "").trim(),
@@ -101,97 +117,55 @@ function mergeCSV(rows) {
       official_email: email,
       phone: (r[idx("phone")] || "").trim(),
       personal_email: (r[idx("personal email")] || "").trim(),
-      active: statusRaw === "active"
+      active: (r[idx("status")] || "active").toLowerCase() === "active"
     };
 
     const existing = mergedDB.find(
       x => x.official_email.toLowerCase() === email.toLowerCase()
     );
 
-    if (existing) {
-      Object.assign(existing, rec);
-    } else {
+    if (existing) Object.assign(existing, rec);
+    else {
       mergedDB.push({
         ...rec,
-        id: `UOL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+        id: firstCleanImport
+          ? `UOL-${crypto.randomUUID()}`
+          : `UOL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       });
     }
   });
 }
 
 /* =========================
-   UI INITIALIZATION
+   RENDER – FLAT LIST
 ========================= */
-function initUI() {
-  const campuses = [...new Set(mergedDB.map(r => r.campus))];
-  activeCampus = campuses[0];
-  renderCampuses(campuses);
-  renderDepartments();
-}
-
-function renderCampuses(list) {
-  const el = document.getElementById("campusTabs");
-  el.innerHTML = "";
-
-  list.forEach(c => {
-    const t = document.createElement("div");
-    t.className = "tab" + (c === activeCampus ? " active" : "");
-    t.textContent = c;
-    t.onclick = () => {
-      activeCampus = c;
-      activeDepartment = "All";
-      renderCampuses(list);
-      renderDepartments();
-    };
-    el.appendChild(t);
-  });
-}
-
-function renderDepartments() {
-  const staff = mergedDB.filter(r => r.campus === activeCampus);
-  const depts = ["All", ...new Set(staff.map(r => r.department))];
-
-  const el = document.getElementById("departmentPills");
-  el.innerHTML = "";
-
-  depts.forEach(d => {
-    const p = document.createElement("div");
-    p.className = "pill" + (d === activeDepartment ? " active" : "");
-    p.textContent = d;
-    p.onclick = () => {
-      activeDepartment = d;
-      renderDepartments();
-      renderCards();
-    };
-    el.appendChild(p);
-  });
-
-  renderCards();
-}
-
-function renderCards() {
+function renderAllCards() {
   const el = document.getElementById("directory");
   el.innerHTML = "";
 
-  mergedDB
-    .filter(r => r.campus === activeCampus)
-    .filter(r => activeDepartment === "All" || r.department === activeDepartment)
-    .forEach(r => el.appendChild(createCard(r)));
+  mergedDB.forEach((r, i) => {
+    el.appendChild(createCard(r, i));
+  });
 }
 
-function createCard(r) {
+function createCard(r, index) {
   const card = document.createElement("div");
   card.className = "card";
 
   card.innerHTML = `
-    ${editable("Name", r, "name")}
-    ${editable("Designation", r, "designation")}
-    ${editable("Email", r, "official_email")}
-    ${editable("Phone", r, "phone")}
-    ${editable("Personal Email", r, "personal_email")}
+    <div class="field text-xs text-gray-500">
+      ${r.campus} • ${r.department}
+    </div>
+
+    ${editable("Name", r, "name", index)}
+    ${editable("Designation", r, "designation", index)}
+    ${editable("Official Email", r, "official_email", index)}
+    ${editable("Phone", r, "phone", index)}
+    ${editable("Personal Email", r, "personal_email", index)}
+
     <div class="field">
       Status:
-      <select>
+      <select data-index="${index}">
         <option value="true" ${r.active ? "selected" : ""}>Active</option>
         <option value="false" ${!r.active ? "selected" : ""}>Inactive</option>
       </select>
@@ -199,28 +173,22 @@ function createCard(r) {
   `;
 
   card.querySelector("select").onchange = e => {
-    r.active = e.target.value === "true";
+    mergedDB[index].active = e.target.value === "true";
   };
 
   return card;
 }
 
-function editable(label, obj, key) {
+function editable(label, obj, key, index) {
   return `
     <div class="field">
       ${label}:
-      <span onclick="editField(this,'${key}')">${obj[key] || ""}</span>
+      <span onclick="editField(this,'${key}',${index})">${obj[key] || ""}</span>
     </div>
   `;
 }
 
-/* =========================
-   SAFE INLINE EDIT
-========================= */
-window.editField = (el, key) => {
-  const card = el.closest(".card");
-  const index = [...card.parentNode.children].indexOf(card);
-
+window.editField = (el, key, index) => {
   const input = document.createElement("input");
   input.value = el.textContent;
 
@@ -235,12 +203,22 @@ window.editField = (el, key) => {
 };
 
 /* =========================
+   BULK STATUS
+========================= */
+function bulkStatus(value) {
+  if (!confirm(`Set all users to ${value ? "Active" : "Inactive"}?`)) return;
+
+  mergedDB.forEach(r => (r.active = value));
+  renderAllCards();
+}
+
+/* =========================
    SUBMIT
 ========================= */
 function handleSubmit() {
   if (!unlocked) return;
-  if (!confirm("Are you sure you want to apply these changes?")) return;
-  alert("Changes finalized. Please export and commit the file.");
+  if (!confirm("Finalize all changes?")) return;
+  alert("Changes finalized. Export and commit the updated file.");
 }
 
 /* =========================
@@ -252,7 +230,9 @@ function exportJSON() {
 
 function exportCSV() {
   const headers = Object.keys(mergedDB[0]);
-  const rows = mergedDB.map(r => headers.map(h => r[h] ?? "").join(","));
+  const rows = mergedDB.map(r =>
+    headers.map(h => r[h] ?? "").join(",")
+  );
   download("UOL_Staff_Export.csv", [headers.join(","), ...rows].join("\n"));
 }
 
@@ -264,9 +244,9 @@ function download(name, content) {
 }
 
 /* =========================
-   ERROR (DETERRENCE)
+   ERROR
 ========================= */
 function triggerInternalError() {
   document.body.innerHTML =
-    "<h2 style='text-align:center;font-family:Inter'>Internal Server Error</h2>";
+    "<h2 style='text-align:center'>Internal Server Error</h2>";
 }
