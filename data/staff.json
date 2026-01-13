@@ -119,5 +119,181 @@
     "personal_email": "dorjeyusa@gmail.com",
     "active": true,
     "id": "UOL-18d26ea2-9109-419e-8cfa-91624c27dce8"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "DELDAN NAMGYAL",
+    "designation": "TECHNICAL ASSISTANT",
+    "official_email": "deldan99@uol.ac.in",
+    "phone": "9419332244",
+    "personal_email": "deldan99@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481193-160"
+  },
+  {
+    "campus": "Kargil Campus",
+    "department": "Faculties",
+    "name": "Dr. Imtiyaz Hussain",
+    "designation": "Assistant Professor",
+    "official_email": "imtibotany@uol.ac.in",
+    "phone": "8494067895",
+    "personal_email": "imtiau786@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-663"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Deldan Namgyal",
+    "designation": "Technical Assistant",
+    "official_email": "deldan.namgyal@uol.ac.in",
+    "phone": "9797547337",
+    "personal_email": "deldan99@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-476"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Kunzang Dolma",
+    "designation": "Senior Stenographer",
+    "official_email": "kunzang.dolma@uol.ac.in",
+    "phone": "9622955595",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-554"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Nazia Parveen",
+    "designation": "Account Assistant",
+    "official_email": "nazia.parveen@uol.ac.in",
+    "phone": "6005867010",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-418"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Faculties",
+    "name": "Dr. ANWAR HUSSAIN",
+    "designation": "Assistant Professor cum Junior Scientist (Food Technology)",
+    "official_email": "anwarfoodtech101@uol.ac.in",
+    "phone": "9419992976",
+    "personal_email": "anwarfoodtech101@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-770"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Mohammad Bashir",
+    "designation": "Field Cum Laboratory Assistant",
+    "official_email": "mohammad.bashir@uol.ac.in",
+    "phone": "9622958510",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-956"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Fazul Rehman",
+    "designation": "Field Cum Laboratory Assistant",
+    "official_email": "fazul.rehman@uol.ac.in",
+    "phone": "9622994050",
+    "personal_email": "fazilrehman812@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-94"
+  },
+  {
+    "campus": "Kargil Campus",
+    "department": "Other    Department of Zoology",
+    "name": "Mohsin Ali",
+    "designation": "Assistant Professor",
+    "official_email": "mohsinali@uol.ac.in",
+    "phone": "7889442556",
+    "personal_email": "Mohsinzool82@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-870"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Nawang Namgail",
+    "designation": "Field cum Laboratory Assistant",
+    "official_email": "nawang.namgail@uol.ac.in",
+    "phone": "7051691468",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-370"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Zakir Hussain",
+    "designation": "Tractor Driver",
+    "official_email": "zakir.hussain@uol.ac.in",
+    "phone": "9622969739",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-185"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Tsering Falzang",
+    "designation": "Orderly cum Chowkidar",
+    "official_email": "tsering.falzang@uol.ac.in",
+    "phone": "9622167366",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-431"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Zahoor Hussain",
+    "designation": "Driver",
+    "official_email": "zahoor.hussain@uol.ac.in",
+    "phone": "9906982765",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-113"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Phunchok Dolma",
+    "designation": "Farm Attendant",
+    "official_email": "punchok.dolma@uol.ac.in",
+    "phone": "9596928914",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-826"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Rinchen Angmo",
+    "designation": "Farm Attendant",
+    "official_email": "rinchen.angmo@uol.ac.in",
+    "phone": "8899719923",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-357"
+  },
+  {
+    "campus": "SAS&T Leh",
+    "department": "Directors SAS&T Leh Office",
+    "name": "Tsering Dolkar",
+    "designation": "Farm Attendant",
+    "official_email": "tsering.dolkar@uol.ac.in",
+    "phone": "9797505257",
+    "personal_email": "skuastleh@gmail.com",
+    "active": true,
+    "id": "UOL-1768295481194-755"
   }
 ]
