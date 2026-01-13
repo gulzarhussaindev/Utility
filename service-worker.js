@@ -35,16 +35,21 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const req = event.request;
 
-  // Never cache admin
+  // Never cache admin routes
   if (req.url.includes("admin")) return;
 
   event.respondWith(
     caches.match(req).then(cached => {
+
       const networkFetch = fetch(req)
         .then(networkRes => {
+          // Clone immediately
+          const responseClone = networkRes.clone();
+
+          // Cache only GET requests
           if (req.method === "GET") {
             caches.open(CACHE_NAME).then(cache => {
-              cache.put(req, networkRes.clone());
+              cache.put(req, responseClone);
             });
 
             // Notify clients if staff.json changed
@@ -56,10 +61,12 @@ self.addEventListener("fetch", event => {
               });
             }
           }
+
           return networkRes;
         })
         .catch(() => cached);
 
+      // Prefer cache, fallback to network
       return cached || networkFetch;
     })
   );
