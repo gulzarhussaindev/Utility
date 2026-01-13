@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* ===== UOL THEME ===== */
+@theme {
+  --color-uol-primary: #1e3a8a;
+  --color-uol-secondary: #0f172a;
+  --color-uol-accent: #2563eb;
+  --color-uol-bg: #eef2f9;
+
+  --font-sans: Inter, system-ui, sans-serif;
+}
+
+/* ===== YOUR CUSTOM CSS (already had) ===== */
+.credit-bar {
+  position: sticky;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  color: white;
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
