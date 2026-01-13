@@ -1,0 +1,137 @@
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  background: #f5f7fb;
+}
+
+/* UPLOAD */
+.upload-gate {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* HEADER */
+.admin-header {
+  background: #111827;
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.actions button {
+  margin-left: 8px;
+}
+
+.submit-btn {
+  background: #2563eb;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.export-btn {
+  background: #10b981;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* TABS */
+.tabs-section {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tab.active {
+  background: #2563eb;
+  color: white;
+}
+
+/* PILLS */
+.controls {
+  padding: 16px 20px;
+}
+
+.pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.pill.active {
+  background: #111827;
+  color: white;
+}
+
+/* CARDS */
+.container {
+  padding: 20px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.field {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.field span {
+  cursor: pointer;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  font-size: 13px;
+}
+
+.hidden {
+  display: none;
+}

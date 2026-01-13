@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>UOL Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- UPLOAD GATE -->
+  <div id="uploadGate" class="upload-gate">
+    <h2>Admin Data Import</h2>
+    <input type="file" id="csvInput" accept=".csv" />
+  </div>
+
+  <!-- ADMIN APP -->
+  <div id="adminApp" class="hidden">
+
+    <header class="admin-header">
+      <h1>UOL Admin Panel</h1>
+
+      <div class="actions">
+        <button id="submitBtn" class="submit-btn" disabled>Submit</button>
+        <button id="exportJsonBtn" class="export-btn hidden">Export JSON</button>
+        <button id="exportCsvBtn" class="export-btn hidden">Export Excel</button>
+      </div>
+    </header>
+
+    <section class="tabs-section">
+      <div id="campusTabs" class="tabs"></div>
+    </section>
+
+    <section class="controls">
+      <div id="departmentPills" class="pills"></div>
+    </section>
+
+    <main class="container">
+      <div id="directory" class="cards"></div>
+    </main>
+
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

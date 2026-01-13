@@ -1,0 +1,22 @@
+{
+  "name": "University of Ladakh Directory",
+  "short_name": "UOL Directory",
+  "description": "Official Faculty and Staff Directory of University of Ladakh",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e3a8a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
