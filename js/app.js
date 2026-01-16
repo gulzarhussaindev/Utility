@@ -1,10 +1,25 @@
 /* ======================
+   UOL Staff Directory – Frontend App
+   Author: Gulzar Hussain
+====================== */
+
+/* ======================
+   UTIL: TITLE CASE
+====================== */
+function toTitleCase(str = "") {
+  return str
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
+/* ======================
    PWA INSTALL BUTTON
 ====================== */
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById("installBtn");
 
-window.addEventListener("beforeinstallprompt", (e) => {
+window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredInstallPrompt = e;
   if (installBtn) installBtn.classList.remove("hidden");
@@ -39,7 +54,16 @@ const searchInput = document.getElementById("searchInput");
 fetch("data/staff.json")
   .then(res => res.json())
   .then(data => {
-    allStaff = data.filter(p => p.active !== false);
+    allStaff = data
+      .filter(p => p.active !== false)
+      .map(p => ({
+        ...p,
+        name: toTitleCase(p.name),
+        designation: toTitleCase(p.designation),
+        campus: toTitleCase(p.campus),
+        department: toTitleCase(p.department)
+      }));
+
     initCampuses();
     setupSearchClear();
   });
@@ -58,19 +82,20 @@ function setupSearchClear() {
   clearBtn.innerHTML = "&times;";
   clearBtn.setAttribute("aria-label", "Clear search");
 
-  clearBtn.style.position = "absolute";
-  clearBtn.style.right = "14px";
-  clearBtn.style.top = "50%";
-  clearBtn.style.transform = "translateY(-50%)";
-  clearBtn.style.fontSize = "18px";
-  clearBtn.style.color = "#64748b";
-  clearBtn.style.cursor = "pointer";
-  clearBtn.style.display = "none";
+  Object.assign(clearBtn.style, {
+    position: "absolute",
+    right: "14px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    fontSize: "18px",
+    color: "#64748b",
+    cursor: "pointer",
+    display: "none"
+  });
 
   clearBtn.onclick = () => {
     searchInput.value = "";
     clearBtn.style.display = "none";
-    searchInput.focus();
     applyFilters();
   };
 
@@ -102,8 +127,6 @@ function initCampuses() {
 
     tab.onclick = () => {
       activeCampus = campus;
-
-      // 🔑 CRITICAL FIX — reset department
       activeDepartment = "All";
 
       document.querySelectorAll("#campusTabs button").forEach(b => {
@@ -128,7 +151,6 @@ function initCampuses() {
    DEPARTMENT PILLS
 ====================== */
 function initDepartments() {
-  // 🔒 HARD RESET (prevents stale filters)
   activeDepartment = "All";
 
   const pills = document.getElementById("departmentPills");
@@ -196,7 +218,7 @@ function applyFilters() {
 }
 
 /* ======================
-   CARDS
+   RENDER CARDS
 ====================== */
 function render(list) {
   const container = document.getElementById("directory");

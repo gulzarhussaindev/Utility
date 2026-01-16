@@ -27,6 +27,16 @@ activateAllBtn.addEventListener("click", () => bulkStatus(true));
 deactivateAllBtn.addEventListener("click", () => bulkStatus(false));
 
 /* =========================
+   TEXT NORMALIZATION
+========================= */
+function toTitleCase(str = "") {
+  return str
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
+/* =========================
    UPLOAD
 ========================= */
 async function handleUpload() {
@@ -80,7 +90,7 @@ async function loadDB() {
 }
 
 /* =========================
-   MERGE CSV (UPDATED DUPLICATE LOGIC)
+   MERGE CSV (COMPOSITE DUPLICATE)
 ========================= */
 function mergeCSV(rows) {
   if (!rows || rows.length < 2) triggerInternalError();
@@ -107,16 +117,17 @@ function mergeCSV(rows) {
     if (!r || r.length < headers.length) return;
 
     const rec = {
-      campus: (r[idx("campus")] || "").trim(),
-      department: (r[idx("department")] || "").trim(),
-      name: (r[idx("full name")] || "").trim(),
-      designation: (r[idx("designation")] || "").trim(),
+      campus: toTitleCase(r[idx("campus")] || ""),
+      department: toTitleCase(r[idx("department")] || ""),
+      name: toTitleCase(r[idx("full name")] || ""),
+      designation: toTitleCase(r[idx("designation")] || ""),
       official_email: (r[idx("official email")] || "").trim(),
       phone: (r[idx("phone")] || "").trim(),
       personal_email: (r[idx("personal email")] || "").trim(),
       active: (r[idx("status")] || "active").toLowerCase() === "active"
     };
 
+    // Minimum sanity
     if (!rec.name || !rec.phone) return;
 
     /* 🔑 COMPOSITE DUPLICATE CHECK */
@@ -192,13 +203,20 @@ function editable(label, obj, key, index) {
   `;
 }
 
+/* =========================
+   INLINE EDIT (NORMALIZED)
+========================= */
 window.editField = (el, key, index) => {
   const input = document.createElement("input");
   input.value = el.textContent;
 
   input.onblur = () => {
-    mergedDB[index][key] = input.value;
-    el.textContent = input.value;
+    mergedDB[index][key] =
+      ["name", "designation", "campus", "department"].includes(key)
+        ? toTitleCase(input.value)
+        : input.value.trim();
+
+    el.textContent = mergedDB[index][key];
     input.replaceWith(el);
   };
 
@@ -211,7 +229,6 @@ window.editField = (el, key, index) => {
 ========================= */
 function bulkStatus(value) {
   if (!confirm(`Set all users to ${value ? "Active" : "Inactive"}?`)) return;
-
   mergedDB.forEach(r => (r.active = value));
   renderAllCards();
 }
