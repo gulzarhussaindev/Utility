@@ -80,7 +80,7 @@ async function loadDB() {
 }
 
 /* =========================
-   MERGE CSV
+   MERGE CSV (UPDATED DUPLICATE LOGIC)
 ========================= */
 function mergeCSV(rows) {
   if (!rows || rows.length < 2) triggerInternalError();
@@ -106,26 +106,30 @@ function mergeCSV(rows) {
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
-    const email = (r[idx("official email")] || "").trim();
-    if (!email) return;
-
     const rec = {
       campus: (r[idx("campus")] || "").trim(),
       department: (r[idx("department")] || "").trim(),
       name: (r[idx("full name")] || "").trim(),
       designation: (r[idx("designation")] || "").trim(),
-      official_email: email,
+      official_email: (r[idx("official email")] || "").trim(),
       phone: (r[idx("phone")] || "").trim(),
       personal_email: (r[idx("personal email")] || "").trim(),
       active: (r[idx("status")] || "active").toLowerCase() === "active"
     };
 
-    const existing = mergedDB.find(
-      x => x.official_email.toLowerCase() === email.toLowerCase()
+    if (!rec.name || !rec.phone) return;
+
+    /* 🔑 COMPOSITE DUPLICATE CHECK */
+    const existing = mergedDB.find(x =>
+      x.name === rec.name &&
+      x.designation === rec.designation &&
+      (x.personal_email || "") === (rec.personal_email || "") &&
+      x.phone === rec.phone
     );
 
-    if (existing) Object.assign(existing, rec);
-    else {
+    if (existing) {
+      Object.assign(existing, rec);
+    } else {
       mergedDB.push({
         ...rec,
         id: firstCleanImport
