@@ -7,7 +7,7 @@
     "official_email": "mohdbaqirparkachik888@gmail.com",
     "phone": "8082891535",
     "personal_email": "mohdbaqirparkachik888@gmail.com",
-    "active": true,
+    "active": false,
     "id": "UOL-f1a107d6-00eb-408b-bf0b-544fb80c9e78"
   },
   {
@@ -331,7 +331,7 @@
   },
   {
     "campus": "Kargil Campus",
-    "department": "Support staff",
+    "department": "Faculties",
     "name": "Zainul Abideen",
     "designation": "Laboratory assistant",
     "official_email": "zainul.abideen@uol.ac.in",
