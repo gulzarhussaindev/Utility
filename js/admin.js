@@ -1,13 +1,16 @@
 /* =========================================================
-   UOL Staff Directory – Admin Import Panel (FLAT MODE)
+   UOL Staff Directory – Admin Import Panel (DIFF MODE)
    Author: Gulzar Hussain
 ========================================================= */
 
 const REQUIRED_FILENAME = "UOL_Staff_Master.csv";
 
-let mergedDB = [];
+/* =========================
+   STATE
+========================= */
+let existingDB = [];
+let diffView = []; // only NEW + UPDATED records
 let unlocked = false;
-let firstCleanImport = false;
 
 /* =========================
    DOM
@@ -16,18 +19,14 @@ const csvInput = document.getElementById("csvInput");
 const submitBtn = document.getElementById("submitBtn");
 const exportJsonBtn = document.getElementById("exportJsonBtn");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
-const activateAllBtn = document.getElementById("activateAllBtn");
-const deactivateAllBtn = document.getElementById("deactivateAllBtn");
 
 csvInput.addEventListener("change", handleUpload);
 submitBtn.addEventListener("click", handleSubmit);
 exportJsonBtn.addEventListener("click", exportJSON);
 exportCsvBtn.addEventListener("click", exportCSV);
-activateAllBtn.addEventListener("click", () => bulkStatus(true));
-deactivateAllBtn.addEventListener("click", () => bulkStatus(false));
 
 /* =========================
-   NORMALIZE (IMPORT ONLY)
+   NORMALIZATION (IMPORT ONLY)
 ========================= */
 function toTitleCase(str = "") {
   return str
@@ -37,7 +36,20 @@ function toTitleCase(str = "") {
 }
 
 /* =========================
-   UPLOAD
+   LOAD EXISTING DB
+========================= */
+async function loadDB() {
+  try {
+    const res = await fetch("data/staff.json");
+    const data = await res.json();
+    existingDB = Array.isArray(data) ? data : [];
+  } catch {
+    existingDB = [];
+  }
+}
+
+/* =========================
+   UPLOAD HANDLER
 ========================= */
 async function handleUpload() {
   const file = csvInput.files[0];
@@ -51,25 +63,17 @@ async function handleUpload() {
     const rows = text.trim().split("\n").map(r => r.split(","));
 
     await loadDB();
-
-    if (mergedDB.length === 0) {
-      firstCleanImport = true;
-      mergedDB = [];
-    }
-
-    mergeCSV(rows);
+    processCSV(rows);
 
     unlocked = true;
     submitBtn.disabled = false;
     exportJsonBtn.classList.remove("hidden");
     exportCsvBtn.classList.remove("hidden");
-    activateAllBtn.classList.remove("hidden");
-    deactivateAllBtn.classList.remove("hidden");
 
     document.getElementById("uploadGate").classList.add("hidden");
     document.getElementById("adminApp").classList.remove("hidden");
 
-    renderAllCards();
+    renderDiffCards();
   } catch (e) {
     console.error(e);
     triggerInternalError();
@@ -77,25 +81,12 @@ async function handleUpload() {
 }
 
 /* =========================
-   LOAD DB
+   PROCESS CSV (DIFF ENGINE)
 ========================= */
-async function loadDB() {
-  try {
-    const res = await fetch("data/staff.json");
-    const data = await res.json();
-    mergedDB = Array.isArray(data) ? data : [];
-  } catch {
-    mergedDB = [];
-  }
-}
+function processCSV(rows) {
+  if (rows.length < 2) triggerInternalError();
 
-/* =========================
-   MERGE CSV
-   - normalize here
-   - ignore duplicates completely
-========================= */
-function mergeCSV(rows) {
-  if (!rows || rows.length < 2) triggerInternalError();
+  diffView = [];
 
   const headers = rows[0].map(h => h.trim().toLowerCase());
   const idx = n => headers.indexOf(n);
@@ -115,6 +106,8 @@ function mergeCSV(rows) {
     if (idx(c) === -1) triggerInternalError();
   });
 
+  const seenCSV = new Set(); // avoid duplicate rows in CSV
+
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
@@ -129,122 +122,139 @@ function mergeCSV(rows) {
       active: (r[idx("status")] || "active").toLowerCase() === "active"
     };
 
-    // Minimum required
+    // minimum sanity
     if (!rec.name || !rec.phone) return;
 
-    // 🔑 STRICT DUPLICATE CHECK
-    const duplicate = mergedDB.some(x =>
+    const signature = [
+      rec.name,
+      rec.designation,
+      rec.personal_email,
+      rec.phone
+    ].join("|");
+
+    if (seenCSV.has(signature)) return;
+    seenCSV.add(signature);
+
+    const dbMatch = existingDB.find(x =>
       x.name === rec.name &&
       x.designation === rec.designation &&
-      (x.personal_email || "") === (rec.personal_email || "") &&
+      (x.personal_email || "") === rec.personal_email &&
       x.phone === rec.phone
     );
 
-    if (duplicate) return; // ❌ ignore completely
+    // 🔹 CASE 1: COMPLETELY NEW
+    if (!dbMatch) {
+      diffView.push({
+        type: "NEW",
+        newData: rec
+      });
+      return;
+    }
 
-    mergedDB.push({
-      ...rec,
-      id: firstCleanImport
-        ? `UOL-${crypto.randomUUID()}`
-        : `UOL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    // 🔹 CASE 2: POSSIBLE UPDATE (compare fields)
+    const changes = {};
+
+    ["campus", "department", "official_email", "active"].forEach(k => {
+      if ((dbMatch[k] || "") !== (rec[k] || "")) {
+        changes[k] = {
+          from: dbMatch[k] || "",
+          to: rec[k] || ""
+        };
+      }
     });
+
+    if (Object.keys(changes).length) {
+      diffView.push({
+        type: "UPDATE",
+        oldData: dbMatch,
+        newData: rec,
+        changes
+      });
+    }
   });
 }
 
 /* =========================
-   RENDER – FLAT
+   RENDER DIFF VIEW
 ========================= */
-function renderAllCards() {
+function renderDiffCards() {
   const el = document.getElementById("directory");
   el.innerHTML = "";
 
-  mergedDB.forEach((r, i) => {
-    el.appendChild(createCard(r, i));
+  if (!diffView.length) {
+    el.innerHTML =
+      "<p style='text-align:center'>No new or updated records found</p>";
+    return;
+  }
+
+  diffView.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    if (item.type === "NEW") {
+      card.innerHTML = `
+        <div class="badge new">NEW</div>
+        <div><strong>${item.newData.name}</strong></div>
+        <div>${item.newData.designation}</div>
+        <div>${item.newData.department} • ${item.newData.campus}</div>
+        <div>${item.newData.official_email}</div>
+        <div>${item.newData.phone}</div>
+      `;
+    }
+
+    if (item.type === "UPDATE") {
+      const diffHtml = Object.entries(item.changes)
+        .map(
+          ([k, v]) =>
+            `<div class="diff">${k}: <span>${v.from}</span> → <strong>${v.to}</strong></div>`
+        )
+        .join("");
+
+      card.innerHTML = `
+        <div class="badge update">UPDATE</div>
+        <div><strong>${item.newData.name}</strong></div>
+        <div>${item.newData.designation}</div>
+        ${diffHtml}
+      `;
+    }
+
+    el.appendChild(card);
   });
 }
 
-function createCard(r, index) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  card.innerHTML = `
-    <div class="field text-xs text-gray-500">
-      ${r.campus} • ${r.department}
-    </div>
-
-    ${editable("Name", r, "name", index)}
-    ${editable("Designation", r, "designation", index)}
-    ${editable("Official Email", r, "official_email", index)}
-    ${editable("Phone", r, "phone", index)}
-    ${editable("Personal Email", r, "personal_email", index)}
-
-    <div class="field">
-      Status:
-      <select data-index="${index}">
-        <option value="true" ${r.active ? "selected" : ""}>Active</option>
-        <option value="false" ${!r.active ? "selected" : ""}>Inactive</option>
-      </select>
-    </div>
-  `;
-
-  card.querySelector("select").onchange = e => {
-    mergedDB[index].active = e.target.value === "true";
-  };
-
-  return card;
-}
-
-function editable(label, obj, key, index) {
-  return `
-    <div class="field">
-      ${label}:
-      <span onclick="editField(this,'${key}',${index})">${obj[key] || ""}</span>
-    </div>
-  `;
-}
-
-window.editField = (el, key, index) => {
-  const input = document.createElement("input");
-  input.value = el.textContent;
-
-  input.onblur = () => {
-    mergedDB[index][key] = input.value.trim();
-    el.textContent = mergedDB[index][key];
-    input.replaceWith(el);
-  };
-
-  el.replaceWith(input);
-  input.focus();
-};
-
 /* =========================
-   BULK STATUS
-========================= */
-function bulkStatus(value) {
-  if (!confirm(`Set all users to ${value ? "Active" : "Inactive"}?`)) return;
-  mergedDB.forEach(r => (r.active = value));
-  renderAllCards();
-}
-
-/* =========================
-   SUBMIT
+   APPLY & EXPORT
 ========================= */
 function handleSubmit() {
   if (!unlocked) return;
-  if (!confirm("Finalize all changes?")) return;
-  alert("Changes finalized. Export and commit the updated file.");
+  if (!confirm("Apply all NEW and UPDATED records?")) return;
+
+  diffView.forEach(item => {
+    if (item.type === "NEW") {
+      existingDB.push({
+        ...item.newData,
+        id: `UOL-${crypto.randomUUID()}`
+      });
+    }
+
+    if (item.type === "UPDATE") {
+      Object.assign(item.oldData, item.newData);
+    }
+  });
+
+  alert("Changes applied. Export to save.");
 }
 
 /* =========================
    EXPORT
 ========================= */
 function exportJSON() {
-  download("staff.json", JSON.stringify(mergedDB, null, 2));
+  download("staff.json", JSON.stringify(existingDB, null, 2));
 }
 
 function exportCSV() {
-  const headers = Object.keys(mergedDB[0]);
-  const rows = mergedDB.map(r =>
+  const headers = Object.keys(existingDB[0]);
+  const rows = existingDB.map(r =>
     headers.map(h => r[h] ?? "").join(",")
   );
   download("UOL_Staff_Export.csv", [headers.join(","), ...rows].join("\n"));
