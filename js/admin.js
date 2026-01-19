@@ -1,5 +1,5 @@
 /* =========================================================
-   UOL Staff Directory – Admin Import Panel (DIFF MODE)
+   UOL Staff Directory – Admin Import Panel (SMART DIFF MODE)
    Author: Gulzar Hussain
 ========================================================= */
 
@@ -9,7 +9,7 @@ const REQUIRED_FILENAME = "UOL_Staff_Master.csv";
    STATE
 ========================= */
 let existingDB = [];
-let diffView = []; // only NEW + UPDATED records
+let diffView = []; // NEW + UPDATE only
 let unlocked = false;
 
 /* =========================
@@ -26,17 +26,14 @@ exportJsonBtn.addEventListener("click", exportJSON);
 exportCsvBtn.addEventListener("click", exportCSV);
 
 /* =========================
-   NORMALIZATION (IMPORT ONLY)
+   IMPORT NORMALIZATION ONLY
 ========================= */
-function toTitleCase(str = "") {
-  return str
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
-    .trim();
+function normalize(str = "") {
+  return str.trim();
 }
 
 /* =========================
-   LOAD EXISTING DB
+   LOAD DB
 ========================= */
 async function loadDB() {
   try {
@@ -49,7 +46,7 @@ async function loadDB() {
 }
 
 /* =========================
-   UPLOAD HANDLER
+   UPLOAD
 ========================= */
 async function handleUpload() {
   const file = csvInput.files[0];
@@ -63,7 +60,7 @@ async function handleUpload() {
     const rows = text.trim().split("\n").map(r => r.split(","));
 
     await loadDB();
-    processCSV(rows);
+    buildDiff(rows);
 
     unlocked = true;
     submitBtn.disabled = false;
@@ -73,7 +70,7 @@ async function handleUpload() {
     document.getElementById("uploadGate").classList.add("hidden");
     document.getElementById("adminApp").classList.remove("hidden");
 
-    renderDiffCards();
+    renderDiff();
   } catch (e) {
     console.error(e);
     triggerInternalError();
@@ -81,11 +78,10 @@ async function handleUpload() {
 }
 
 /* =========================
-   PROCESS CSV (DIFF ENGINE)
+   DIFF ENGINE
 ========================= */
-function processCSV(rows) {
+function buildDiff(rows) {
   if (rows.length < 2) triggerInternalError();
-
   diffView = [];
 
   const headers = rows[0].map(h => h.trim().toLowerCase());
@@ -98,31 +94,28 @@ function processCSV(rows) {
     "designation",
     "official email",
     "phone",
-    "personal email",
-    "status"
+    "personal email"
   ];
 
   REQUIRED.forEach(c => {
     if (idx(c) === -1) triggerInternalError();
   });
 
-  const seenCSV = new Set(); // avoid duplicate rows in CSV
+  const seenCSV = new Set();
 
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
     const rec = {
-      campus: toTitleCase(r[idx("campus")] || ""),
-      department: toTitleCase(r[idx("department")] || ""),
-      name: toTitleCase(r[idx("full name")] || ""),
-      designation: toTitleCase(r[idx("designation")] || ""),
-      official_email: (r[idx("official email")] || "").trim(),
-      phone: (r[idx("phone")] || "").trim(),
-      personal_email: (r[idx("personal email")] || "").trim(),
-      active: (r[idx("status")] || "active").toLowerCase() === "active"
+      campus: normalize(r[idx("campus")]),
+      department: normalize(r[idx("department")]),
+      name: normalize(r[idx("full name")]),
+      designation: normalize(r[idx("designation")]),
+      official_email: normalize(r[idx("official email")]),
+      phone: normalize(r[idx("phone")]),
+      personal_email: normalize(r[idx("personal email")])
     };
 
-    // minimum sanity
     if (!rec.name || !rec.phone) return;
 
     const signature = [
@@ -142,7 +135,6 @@ function processCSV(rows) {
       x.phone === rec.phone
     );
 
-    // 🔹 CASE 1: COMPLETELY NEW
     if (!dbMatch) {
       diffView.push({
         type: "NEW",
@@ -151,10 +143,8 @@ function processCSV(rows) {
       return;
     }
 
-    // 🔹 CASE 2: POSSIBLE UPDATE (compare fields)
     const changes = {};
-
-    ["campus", "department", "official_email", "active"].forEach(k => {
+    ["campus", "department", "official_email"].forEach(k => {
       if ((dbMatch[k] || "") !== (rec[k] || "")) {
         changes[k] = {
           from: dbMatch[k] || "",
@@ -168,16 +158,17 @@ function processCSV(rows) {
         type: "UPDATE",
         oldData: dbMatch,
         newData: rec,
-        changes
+        changes,
+        apply: true // ✅ checkbox default
       });
     }
   });
 }
 
 /* =========================
-   RENDER DIFF VIEW
+   RENDER DIFF
 ========================= */
-function renderDiffCards() {
+function renderDiff() {
   const el = document.getElementById("directory");
   el.innerHTML = "";
 
@@ -187,23 +178,21 @@ function renderDiffCards() {
     return;
   }
 
-  diffView.forEach(item => {
+  diffView.forEach((item, i) => {
     const card = document.createElement("div");
     card.className = "card";
 
     if (item.type === "NEW") {
       card.innerHTML = `
         <div class="badge new">NEW</div>
-        <div><strong>${item.newData.name}</strong></div>
+        <strong>${item.newData.name}</strong>
         <div>${item.newData.designation}</div>
         <div>${item.newData.department} • ${item.newData.campus}</div>
-        <div>${item.newData.official_email}</div>
-        <div>${item.newData.phone}</div>
       `;
     }
 
     if (item.type === "UPDATE") {
-      const diffHtml = Object.entries(item.changes)
+      const diffs = Object.entries(item.changes)
         .map(
           ([k, v]) =>
             `<div class="diff">${k}: <span>${v.from}</span> → <strong>${v.to}</strong></div>`
@@ -211,11 +200,19 @@ function renderDiffCards() {
         .join("");
 
       card.innerHTML = `
-        <div class="badge update">UPDATE</div>
-        <div><strong>${item.newData.name}</strong></div>
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" checked data-index="${i}">
+          <span class="badge update">UPDATE</span>
+        </label>
+
+        <strong>${item.newData.name}</strong>
         <div>${item.newData.designation}</div>
-        ${diffHtml}
+        ${diffs}
       `;
+
+      card.querySelector("input").onchange = e => {
+        diffView[i].apply = e.target.checked;
+      };
     }
 
     el.appendChild(card);
@@ -223,21 +220,22 @@ function renderDiffCards() {
 }
 
 /* =========================
-   APPLY & EXPORT
+   APPLY
 ========================= */
 function handleSubmit() {
   if (!unlocked) return;
-  if (!confirm("Apply all NEW and UPDATED records?")) return;
+  if (!confirm("Apply selected changes?")) return;
 
   diffView.forEach(item => {
     if (item.type === "NEW") {
       existingDB.push({
         ...item.newData,
+        active: true,
         id: `UOL-${crypto.randomUUID()}`
       });
     }
 
-    if (item.type === "UPDATE") {
+    if (item.type === "UPDATE" && item.apply) {
       Object.assign(item.oldData, item.newData);
     }
   });
