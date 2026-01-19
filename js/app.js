@@ -70,6 +70,7 @@ function setupSearchClear() {
   };
 
   wrapper.appendChild(clearBtn);
+
   searchInput.addEventListener("input", () => {
     clearBtn.style.display = searchInput.value ? "block" : "none";
   });
@@ -133,9 +134,11 @@ function initDepartments() {
 
     pill.onclick = () => {
       activeDepartment = dept;
+
       document
         .querySelectorAll("#departmentPills button")
         .forEach(b => b.classList.remove("bg-uol-primary", "text-white"));
+
       pill.classList.add("bg-uol-primary", "text-white");
       applyFilters();
     };
@@ -228,12 +231,19 @@ function renderRow(label, value) {
 }
 
 /* ======================
-   COPY
+   COPY (GREEN RESTORED)
 ====================== */
 document.addEventListener("click", e => {
-  if (!e.target.matches(".copy-btn")) return;
-  navigator.clipboard.writeText(e.target.dataset.copy).then(() => {
-    e.target.textContent = "Copied";
-    setTimeout(() => (e.target.textContent = "Copy"), 1200);
+  const btn = e.target.closest(".copy-btn");
+  if (!btn) return;
+
+  navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+    btn.textContent = "Copied";
+    btn.classList.add("copied"); // ✅ GREEN STATE
+
+    setTimeout(() => {
+      btn.textContent = "Copy";
+      btn.classList.remove("copied");
+    }, 1200);
   });
 });
