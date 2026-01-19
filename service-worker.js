@@ -4,7 +4,7 @@
    Author: Gulzar Hussain
 ===================================================== */
 
-const CACHE_NAME = "uol-directory-v4";
+const CACHE_NAME = "uol-directory-v5";
 
 const STATIC_ASSETS = [
   "./",
