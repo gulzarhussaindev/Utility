@@ -39,14 +39,18 @@ let activeDepartment = "All";
 const searchInput = document.getElementById("searchInput");
 
 /* ======================
-   LOAD DATA
+   LOAD DATA (ALWAYS FRESH)
 ====================== */
-fetch("data/staff.json")
+fetch(`data/staff.json?v=${Date.now()}`)
   .then(res => res.json())
   .then(data => {
     allStaff = data.filter(p => p.active !== false);
     initCampuses();
     setupSearchClear();
+  })
+  .catch(() => {
+    document.getElementById("directory").innerHTML =
+      '<p class="col-span-full text-center text-red-500">Unable to load data</p>';
   });
 
 /* ======================
@@ -134,11 +138,9 @@ function initDepartments() {
 
     pill.onclick = () => {
       activeDepartment = dept;
-
       document
         .querySelectorAll("#departmentPills button")
         .forEach(b => b.classList.remove("bg-uol-primary", "text-white"));
-
       pill.classList.add("bg-uol-primary", "text-white");
       applyFilters();
     };
@@ -158,7 +160,7 @@ function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
 
   let filtered = q
-    ? allStaff
+    ? allStaff // 🔑 GLOBAL SEARCH (ALL CAMPUSES)
     : allStaff.filter(p => p.campus === activeCampus);
 
   if (!q && activeDepartment !== "All") {
@@ -231,7 +233,7 @@ function renderRow(label, value) {
 }
 
 /* ======================
-   COPY (GREEN RESTORED)
+   COPY (GREEN STATE)
 ====================== */
 document.addEventListener("click", e => {
   const btn = e.target.closest(".copy-btn");
@@ -239,7 +241,7 @@ document.addEventListener("click", e => {
 
   navigator.clipboard.writeText(btn.dataset.copy).then(() => {
     btn.textContent = "Copied";
-    btn.classList.add("copied"); // ✅ GREEN STATE
+    btn.classList.add("copied");
 
     setTimeout(() => {
       btn.textContent = "Copy";

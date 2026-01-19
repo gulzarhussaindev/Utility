@@ -1,10 +1,11 @@
 /* =====================================================
    UOL Staff Directory – Service Worker
-   Strategy: Network-first (auto refresh)
+   Strategy: Network-first (NO JSON CACHE)
    Author: Gulzar Hussain
 ===================================================== */
 
 const CACHE_NAME = "uol-directory-v3";
+
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -19,7 +20,6 @@ const STATIC_ASSETS = [
 ========================= */
 self.addEventListener("install", event => {
   self.skipWaiting();
-
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
@@ -41,31 +41,28 @@ self.addEventListener("activate", event => {
 });
 
 /* =========================
-   FETCH (NETWORK FIRST)
+   FETCH
 ========================= */
 self.addEventListener("fetch", event => {
-  const { request } = event;
+  const req = event.request;
 
-  // Only handle GET requests
-  if (request.method !== "GET") return;
+  // 🚫 NEVER cache staff.json (always fetch fresh)
+  if (req.url.includes("staff.json")) {
+    event.respondWith(fetch(req));
+    return;
+  }
+
+  if (req.method !== "GET") return;
 
   event.respondWith(
     (async () => {
       try {
-        // 🔑 Always try network first
-        const networkResponse = await fetch(request);
-
-        // Cache successful responses
-        if (networkResponse && networkResponse.status === 200) {
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(request, networkResponse.clone());
-        }
-
-        return networkResponse;
-      } catch (err) {
-        // 🔒 Offline fallback
-        const cachedResponse = await caches.match(request);
-        return cachedResponse || Response.error();
+        const fresh = await fetch(req);
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        return caches.match(req);
       }
     })()
   );
