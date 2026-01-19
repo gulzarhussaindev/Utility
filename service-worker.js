@@ -1,73 +1,72 @@
-const CACHE_NAME = "uol-directory-v2";
+/* =====================================================
+   UOL Staff Directory – Service Worker
+   Strategy: Network-first (auto refresh)
+   Author: Gulzar Hussain
+===================================================== */
 
-const CORE_ASSETS = [
+const CACHE_NAME = "uol-directory-v1";
+const STATIC_ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./css/custom_style.css",
   "./js/app.js",
-  "./data/staff.json",
-  "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./manifest.json"
 ];
 
-/* INSTALL */
+/* =========================
+   INSTALL
+========================= */
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
-  );
   self.skipWaiting();
+
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+  );
 });
 
-/* ACTIVATE */
+/* =========================
+   ACTIVATE
+========================= */
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    )
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.map(k => k !== CACHE_NAME && caches.delete(k))
+      );
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
-/* FETCH */
+/* =========================
+   FETCH (NETWORK FIRST)
+========================= */
 self.addEventListener("fetch", event => {
-  const req = event.request;
+  const { request } = event;
 
-  // Never cache admin routes
-  if (req.url.includes("admin")) return;
+  // Only handle GET requests
+  if (request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(req).then(cached => {
+    (async () => {
+      try {
+        // 🔑 Always try network first
+        const networkResponse = await fetch(request);
 
-      const networkFetch = fetch(req)
-        .then(networkRes => {
-          // Clone immediately
-          const responseClone = networkRes.clone();
+        // Cache successful responses
+        if (networkResponse && networkResponse.status === 200) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(request, networkResponse.clone());
+        }
 
-          // Cache only GET requests
-          if (req.method === "GET") {
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(req, responseClone);
-            });
-
-            // Notify clients if staff.json changed
-            if (req.url.includes("staff.json")) {
-              self.clients.matchAll().then(clients => {
-                clients.forEach(client =>
-                  client.postMessage({ type: "DATA_UPDATED" })
-                );
-              });
-            }
-          }
-
-          return networkRes;
-        })
-        .catch(() => cached);
-
-      // Prefer cache, fallback to network
-      return cached || networkFetch;
-    })
+        return networkResponse;
+      } catch (err) {
+        // 🔒 Offline fallback
+        const cachedResponse = await caches.match(request);
+        return cachedResponse || Response.error();
+      }
+    })()
   );
 });
