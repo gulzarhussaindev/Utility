@@ -1,35 +1,10 @@
-/* ======================
+/* ======================================================
    UOL Staff Directory – Frontend App
-====================== */
+   Author: Gulzar Hussain
+====================================================== */
 
 /* ======================
-   PWA INSTALL BUTTON
-====================== */
-let deferredInstallPrompt = null;
-const installBtn = document.getElementById("installBtn");
-
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  if (installBtn) installBtn.classList.remove("hidden");
-});
-
-if (installBtn) {
-  installBtn.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    if (outcome === "accepted") installBtn.classList.add("hidden");
-    deferredInstallPrompt = null;
-  });
-}
-
-window.addEventListener("appinstalled", () => {
-  if (installBtn) installBtn.classList.add("hidden");
-});
-
-/* ======================
-   DATA & STATE
+   STATE
 ====================== */
 let allStaff = [];
 let activeCampus = null;
@@ -38,21 +13,65 @@ let activeDepartment = "All";
 const searchInput = document.getElementById("searchInput");
 
 /* ======================
-   LOAD DATA (ONLINE → OFFLINE SAFE)
+   DEPARTMENT PRIORITY (CAMPUS-WISE)
+====================== */
+const DEPT_PRIORITY = {
+  "Leh Campus": [
+    "Vice Chancellor Office",
+    "Registrar Office",
+    "Dean Offices",
+    "Finance & Accounts",
+    "Deputy Controller of Examination Office",
+    "IT Admission Cell",
+    "IT Examination Cell",
+    "Faculties",
+    "Media Cell",
+    "Works Department"
+  ],
+
+  "Kargil Campus": [
+    "Incharge Administration Office",
+    "Deputy Controller of Examination Office",
+    "Faculties"
+  ],
+
+  "SAS&T Leh": [
+    "Directors SAS&T Leh Office",
+    "Faculties"
+  ],
+
+  "SAS&T Kargil": [
+    "Directors SAS&T Kargil Office",
+    "Faculties"
+  ],
+
+  "Director College Development Council": [
+    "Director College Development Council Office",
+    "Eliezer Joldan Memorial College Leh Principal Office",
+    "Govt Degree College Kargil Principal Office",
+    "Govt Degree College Khaltsi Principal Office",
+    "Govt Degree College Nubra Principal Office",
+    "Govt Degree College Zanskar Principal Office",
+    "Govt Degree College Drass Principal Office"
+  ]
+};
+
+/* ======================
+   UTIL – NORMALIZE (COMPARE ONLY)
+====================== */
+function normalizeKey(str = "") {
+  return str.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/* ======================
+   LOAD DATA
 ====================== */
 fetch("data/staff.json")
-  .then(res => {
-    if (!res.ok) throw new Error("Network error");
-    return res.json();
-  })
+  .then(res => res.json())
   .then(data => {
     allStaff = data.filter(p => p.active !== false);
     initCampuses();
     setupSearchClear();
-  })
-  .catch(() => {
-    document.getElementById("directory").innerHTML =
-      '<p class="col-span-full text-center text-slate-500">Offline — showing last saved data</p>';
   });
 
 /* ======================
@@ -118,7 +137,7 @@ function initCampuses() {
 }
 
 /* ======================
-   DEPARTMENT PILLS
+   DEPARTMENT PILLS (PRIORITY-AWARE)
 ====================== */
 function initDepartments() {
   activeDepartment = "All";
@@ -126,9 +145,37 @@ function initDepartments() {
   pills.innerHTML = "";
 
   const staff = allStaff.filter(p => p.campus === activeCampus);
-  const departments = ["All", ...new Set(staff.map(p => p.department))];
 
-  departments.forEach((dept, i) => {
+  // Unique departments (normalized)
+  const deptMap = new Map();
+  staff.forEach(p => {
+    const key = normalizeKey(p.department);
+    if (!deptMap.has(key)) deptMap.set(key, p.department);
+  });
+
+  const available = [...deptMap.values()];
+  const priority = DEPT_PRIORITY[activeCampus] || [];
+
+  const ordered = [];
+  const used = new Set();
+
+  priority.forEach(p => {
+    const match = available.find(
+      d => normalizeKey(d) === normalizeKey(p)
+    );
+    if (match) {
+      ordered.push(match);
+      used.add(normalizeKey(match));
+    }
+  });
+
+  const others = available.filter(
+    d => !used.has(normalizeKey(d))
+  );
+
+  const finalList = ["All", ...ordered, ...others];
+
+  finalList.forEach((dept, i) => {
     const pill = document.createElement("button");
     pill.textContent = dept;
     pill.className =
@@ -141,7 +188,9 @@ function initDepartments() {
       activeDepartment = dept;
       document
         .querySelectorAll("#departmentPills button")
-        .forEach(b => b.classList.remove("bg-uol-primary", "text-white"));
+        .forEach(b =>
+          b.classList.remove("bg-uol-primary", "text-white")
+        );
       pill.classList.add("bg-uol-primary", "text-white");
       applyFilters();
     };
@@ -160,21 +209,22 @@ searchInput.addEventListener("input", applyFilters);
 function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
 
-  let filtered = q
-    ? allStaff
-    : allStaff.filter(p => p.campus === activeCampus);
-
-  if (!q && activeDepartment !== "All") {
-    filtered = filtered.filter(p => p.department === activeDepartment);
-  }
+  let filtered;
 
   if (q) {
-    filtered = filtered.filter(p =>
+    // 🔍 SEARCH IS GLOBAL (ALL CAMPUSES)
+    filtered = allStaff.filter(p =>
       p.name.toLowerCase().includes(q) ||
       p.official_email.toLowerCase().includes(q) ||
       (p.personal_email || "").toLowerCase().includes(q) ||
       p.phone.includes(q)
     );
+  } else {
+    // 📍 NORMAL MODE (CAMPUS + DEPT)
+    filtered = allStaff.filter(p => p.campus === activeCampus);
+    if (activeDepartment !== "All") {
+      filtered = filtered.filter(p => p.department === activeDepartment);
+    }
   }
 
   filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -204,13 +254,13 @@ function render(list) {
       <p class="text-sm font-medium text-uol-accent">${p.designation}</p>
 
       <p class="mt-1 text-xs text-gray-500">
-        ${p.department} • ${p.campus}
+        ${p.department} &bull; ${p.campus}
       </p>
 
       <div class="mt-4 space-y-2 text-sm text-gray-600">
-        ${renderRow("Official", p.official_email)}
-        ${p.personal_email ? renderRow("Personal", p.personal_email) : ""}
-        ${renderRow("Phone", p.phone)}
+        ${row("Official", p.official_email)}
+        ${p.personal_email ? row("Personal", p.personal_email) : ""}
+        ${row("Phone", p.phone)}
       </div>
     `;
 
@@ -218,10 +268,7 @@ function render(list) {
   });
 }
 
-/* ======================
-   CONTACT ROW
-====================== */
-function renderRow(label, value) {
+function row(label, value) {
   return `
     <div class="flex justify-between gap-2">
       <span>
@@ -234,7 +281,7 @@ function renderRow(label, value) {
 }
 
 /* ======================
-   COPY (GREEN)
+   COPY (GREEN STATE)
 ====================== */
 document.addEventListener("click", e => {
   const btn = e.target.closest(".copy-btn");
