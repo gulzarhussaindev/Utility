@@ -1,6 +1,5 @@
 /* ======================
    UOL Staff Directory – Frontend App
-   Author: Gulzar Hussain
 ====================== */
 
 /* ======================
@@ -39,10 +38,13 @@ let activeDepartment = "All";
 const searchInput = document.getElementById("searchInput");
 
 /* ======================
-   LOAD DATA (ALWAYS FRESH)
+   LOAD DATA (ONLINE → OFFLINE SAFE)
 ====================== */
-fetch(`data/staff.json?v=${Date.now()}`)
-  .then(res => res.json())
+fetch("data/staff.json")
+  .then(res => {
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+  })
   .then(data => {
     allStaff = data.filter(p => p.active !== false);
     initCampuses();
@@ -50,7 +52,7 @@ fetch(`data/staff.json?v=${Date.now()}`)
   })
   .catch(() => {
     document.getElementById("directory").innerHTML =
-      '<p class="col-span-full text-center text-red-500">Unable to load data</p>';
+      '<p class="col-span-full text-center text-slate-500">Offline — showing last saved data</p>';
   });
 
 /* ======================
@@ -74,7 +76,6 @@ function setupSearchClear() {
   };
 
   wrapper.appendChild(clearBtn);
-
   searchInput.addEventListener("input", () => {
     clearBtn.style.display = searchInput.value ? "block" : "none";
   });
@@ -160,7 +161,7 @@ function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
 
   let filtered = q
-    ? allStaff // 🔑 GLOBAL SEARCH (ALL CAMPUSES)
+    ? allStaff
     : allStaff.filter(p => p.campus === activeCampus);
 
   if (!q && activeDepartment !== "All") {
@@ -203,7 +204,7 @@ function render(list) {
       <p class="text-sm font-medium text-uol-accent">${p.designation}</p>
 
       <p class="mt-1 text-xs text-gray-500">
-        ${p.department} &bull; ${p.campus}
+        ${p.department} • ${p.campus}
       </p>
 
       <div class="mt-4 space-y-2 text-sm text-gray-600">
@@ -233,7 +234,7 @@ function renderRow(label, value) {
 }
 
 /* ======================
-   COPY (GREEN STATE)
+   COPY (GREEN)
 ====================== */
 document.addEventListener("click", e => {
   const btn = e.target.closest(".copy-btn");

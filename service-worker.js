@@ -1,10 +1,9 @@
 /* =====================================================
    UOL Staff Directory – Service Worker
-   Strategy: Network-first (NO JSON CACHE)
-   Author: Gulzar Hussain
+   Strategy: Network-first with cache fallback
 ===================================================== */
 
-const CACHE_NAME = "uol-directory-v5";
+const CACHE_NAME = "uol-directory-v4";
 
 const STATIC_ASSETS = [
   "./",
@@ -46,23 +45,23 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const req = event.request;
 
-  // 🚫 NEVER cache staff.json (always fetch fresh)
-  if (req.url.includes("staff.json")) {
-    event.respondWith(fetch(req));
-    return;
-  }
-
   if (req.method !== "GET") return;
 
   event.respondWith(
     (async () => {
       try {
-        const fresh = await fetch(req);
+        // 🌐 Try network first
+        const networkResponse = await fetch(req);
+
+        // Cache successful responses (including staff.json)
         const cache = await caches.open(CACHE_NAME);
-        cache.put(req, fresh.clone());
-        return fresh;
+        cache.put(req, networkResponse.clone());
+
+        return networkResponse;
       } catch {
-        return caches.match(req);
+        // 📦 Offline fallback
+        const cached = await caches.match(req);
+        return cached || Response.error();
       }
     })()
   );
