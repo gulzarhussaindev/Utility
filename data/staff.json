@@ -658,5 +658,27 @@
     "personal_email": "hafezyunus86@gmail.com",
     "active": true,
     "id": "UOL-f7938793-22b2-4bd4-ade3-e6e19e36318c"
+  },
+  {
+    "campus": "SAS&T Kargil",
+    "department": "Faculties",
+    "name": "Nissar Hussain",
+    "designation": "Driver",
+    "official_email": "deansastkgl@uol.ac.in",
+    "phone": "7051413906",
+    "personal_email": "",
+    "active": true,
+    "id": "UOL-a0dd1f45-c335-4f94-8de2-0074de794b1a"
+  },
+  {
+    "campus": "Leh Campus",
+    "department": "Deputy Controller of Examination Office",
+    "name": "Mepam Tundup",
+    "designation": "Graphic Designer",
+    "official_email": "mepam.tundup@uol.ac.in",
+    "phone": "9797090669",
+    "personal_email": "tundupmepam@gmail.com",
+    "active": true,
+    "id": "UOL-05909d06-676e-4c4b-9f9a-6fc5f2062e8c"
   }
 ]
