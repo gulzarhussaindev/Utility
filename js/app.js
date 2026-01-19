@@ -4,19 +4,7 @@
 ====================== */
 
 /* ======================
-   TEXT NORMALIZATION (IT SAFE)
-====================== */
-function normalizeText(str = "") {
-  return str
-    .toLowerCase()
-    .split(" ")
-    .map(w => (w === "it" ? "IT" : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ")
-    .trim();
-}
-
-/* ======================
-   PWA INSTALL
+   PWA INSTALL BUTTON
 ====================== */
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById("installBtn");
@@ -37,27 +25,26 @@ if (installBtn) {
   });
 }
 
+window.addEventListener("appinstalled", () => {
+  if (installBtn) installBtn.classList.add("hidden");
+});
+
 /* ======================
-   DATA
+   DATA & STATE
 ====================== */
 let allStaff = [];
 let activeCampus = null;
 let activeDepartment = "All";
+
 const searchInput = document.getElementById("searchInput");
 
+/* ======================
+   LOAD DATA
+====================== */
 fetch("data/staff.json")
   .then(res => res.json())
   .then(data => {
-    allStaff = data
-      .filter(p => p.active !== false)
-      .map(p => ({
-        ...p,
-        name: normalizeText(p.name),
-        designation: normalizeText(p.designation),
-        campus: normalizeText(p.campus),
-        department: normalizeText(p.department)
-      }));
-
+    allStaff = data.filter(p => p.active !== false);
     initCampuses();
     setupSearchClear();
   });
@@ -73,16 +60,8 @@ function setupSearchClear() {
 
   const clearBtn = document.createElement("button");
   clearBtn.innerHTML = "&times;";
-  Object.assign(clearBtn.style, {
-    position: "absolute",
-    right: "14px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    fontSize: "18px",
-    color: "#64748b",
-    cursor: "pointer",
-    display: "none"
-  });
+  clearBtn.style.cssText =
+    "position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#64748b;cursor:pointer;display:none";
 
   clearBtn.onclick = () => {
     searchInput.value = "";
@@ -97,7 +76,7 @@ function setupSearchClear() {
 }
 
 /* ======================
-   CAMPUS / DEPARTMENT
+   CAMPUS TABS
 ====================== */
 function initCampuses() {
   const campuses = [...new Set(allStaff.map(p => p.campus))];
@@ -108,14 +87,20 @@ function initCampuses() {
     const tab = document.createElement("button");
     tab.textContent = campus;
     tab.className =
-      "px-5 py-2.5 rounded-full text-sm font-medium transition " +
+      "px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition " +
       (i === 0
-        ? "bg-uol-accent text-white"
-        : "bg-slate-100 text-slate-600");
+        ? "bg-uol-accent text-white shadow-md"
+        : "bg-slate-100 text-slate-600 hover:bg-slate-200");
 
     tab.onclick = () => {
       activeCampus = campus;
       activeDepartment = "All";
+
+      document.querySelectorAll("#campusTabs button").forEach(b =>
+        b.classList.remove("bg-uol-accent", "text-white", "shadow-md")
+      );
+
+      tab.classList.add("bg-uol-accent", "text-white", "shadow-md");
       initDepartments();
     };
 
@@ -126,22 +111,32 @@ function initCampuses() {
   initDepartments();
 }
 
+/* ======================
+   DEPARTMENT PILLS
+====================== */
 function initDepartments() {
+  activeDepartment = "All";
   const pills = document.getElementById("departmentPills");
   pills.innerHTML = "";
 
   const staff = allStaff.filter(p => p.campus === activeCampus);
-  const depts = ["All", ...new Set(staff.map(p => p.department))];
+  const departments = ["All", ...new Set(staff.map(p => p.department))];
 
-  depts.forEach((d, i) => {
+  departments.forEach((dept, i) => {
     const pill = document.createElement("button");
-    pill.textContent = d;
+    pill.textContent = dept;
     pill.className =
-      "px-4 py-1.5 rounded-full text-xs font-medium " +
-      (i === 0 ? "bg-uol-primary text-white" : "bg-slate-100");
+      "px-4 py-1.5 rounded-full text-xs font-medium transition " +
+      (i === 0
+        ? "bg-uol-primary text-white"
+        : "bg-slate-100 text-slate-600 hover:bg-slate-200");
 
     pill.onclick = () => {
-      activeDepartment = d;
+      activeDepartment = dept;
+      document
+        .querySelectorAll("#departmentPills button")
+        .forEach(b => b.classList.remove("bg-uol-primary", "text-white"));
+      pill.classList.add("bg-uol-primary", "text-white");
       applyFilters();
     };
 
@@ -152,16 +147,18 @@ function initDepartments() {
 }
 
 /* ======================
-   FILTER & RENDER
+   FILTERING
 ====================== */
 searchInput.addEventListener("input", applyFilters);
 
 function applyFilters() {
-  const q = searchInput.value.toLowerCase();
+  const q = searchInput.value.toLowerCase().trim();
 
-  let filtered = allStaff.filter(p => p.campus === activeCampus);
+  let filtered = q
+    ? allStaff
+    : allStaff.filter(p => p.campus === activeCampus);
 
-  if (activeDepartment !== "All") {
+  if (!q && activeDepartment !== "All") {
     filtered = filtered.filter(p => p.department === activeDepartment);
   }
 
@@ -174,29 +171,69 @@ function applyFilters() {
     );
   }
 
+  filtered.sort((a, b) => a.name.localeCompare(b.name));
   render(filtered);
 }
 
+/* ======================
+   RENDER
+====================== */
 function render(list) {
-  const el = document.getElementById("directory");
-  el.innerHTML = "";
+  const container = document.getElementById("directory");
+  container.innerHTML = "";
 
   if (!list.length) {
-    el.innerHTML = "<p>No records found</p>";
+    container.innerHTML =
+      '<p class="col-span-full text-center text-slate-500">No records found</p>';
     return;
   }
 
   list.forEach(p => {
     const card = document.createElement("div");
-    card.className = "card";
+    card.className =
+      "group bg-white rounded-xl border border-gray-200 p-5 transition hover:-translate-y-1 hover:shadow-xl";
+
     card.innerHTML = `
-      <h3>${p.name}</h3>
-      <p>${p.designation}</p>
-      <p>${p.department} • ${p.campus}</p>
-      <p>${p.official_email}</p>
-      ${p.personal_email ? `<p>${p.personal_email}</p>` : ""}
-      <p>${p.phone}</p>
+      <h3 class="text-lg font-semibold text-gray-900">${p.name}</h3>
+      <p class="text-sm font-medium text-uol-accent">${p.designation}</p>
+
+      <p class="mt-1 text-xs text-gray-500">
+        ${p.department} &bull; ${p.campus}
+      </p>
+
+      <div class="mt-4 space-y-2 text-sm text-gray-600">
+        ${renderRow("Official", p.official_email)}
+        ${p.personal_email ? renderRow("Personal", p.personal_email) : ""}
+        ${renderRow("Phone", p.phone)}
+      </div>
     `;
-    el.appendChild(card);
+
+    container.appendChild(card);
   });
 }
+
+/* ======================
+   CONTACT ROW
+====================== */
+function renderRow(label, value) {
+  return `
+    <div class="flex justify-between gap-2">
+      <span>
+        <span class="text-gray-400 text-xs mr-1">${label}:</span>
+        ${value}
+      </span>
+      <button class="copy-btn" data-copy="${value}">Copy</button>
+    </div>
+  `;
+}
+
+/* ======================
+   COPY
+====================== */
+document.addEventListener("click", e => {
+  if (!e.target.matches(".copy-btn")) return;
+  navigator.clipboard.writeText(e.target.dataset.copy).then(() => {
+    e.target.textContent = "Copied";
+    setTimeout(() => (e.target.textContent = "Copy"), 1200);
+  });
+});

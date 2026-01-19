@@ -27,14 +27,12 @@ activateAllBtn.addEventListener("click", () => bulkStatus(true));
 deactivateAllBtn.addEventListener("click", () => bulkStatus(false));
 
 /* =========================
-   TEXT NORMALIZATION (IT SAFE)
+   NORMALIZE (IMPORT ONLY)
 ========================= */
-function normalizeText(str = "") {
+function toTitleCase(str = "") {
   return str
     .toLowerCase()
-    .split(" ")
-    .map(w => (w === "it" ? "IT" : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ")
+    .replace(/\b\w/g, c => c.toUpperCase())
     .trim();
 }
 
@@ -92,7 +90,9 @@ async function loadDB() {
 }
 
 /* =========================
-   MERGE CSV (STRICT DUPLICATE CONTROL)
+   MERGE CSV
+   - normalize here
+   - ignore duplicates completely
 ========================= */
 function mergeCSV(rows) {
   if (!rows || rows.length < 2) triggerInternalError();
@@ -115,63 +115,52 @@ function mergeCSV(rows) {
     if (idx(c) === -1) triggerInternalError();
   });
 
-  // 🔐 Track duplicates within same CSV
-  const seenSignatures = new Set();
-
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
     const rec = {
-      campus: normalizeText(r[idx("campus")] || ""),
-      department: normalizeText(r[idx("department")] || ""),
-      name: normalizeText(r[idx("full name")] || ""),
-      designation: normalizeText(r[idx("designation")] || ""),
+      campus: toTitleCase(r[idx("campus")] || ""),
+      department: toTitleCase(r[idx("department")] || ""),
+      name: toTitleCase(r[idx("full name")] || ""),
+      designation: toTitleCase(r[idx("designation")] || ""),
       official_email: (r[idx("official email")] || "").trim(),
       phone: (r[idx("phone")] || "").trim(),
       personal_email: (r[idx("personal email")] || "").trim(),
       active: (r[idx("status")] || "active").toLowerCase() === "active"
     };
 
+    // Minimum required
     if (!rec.name || !rec.phone) return;
 
-    const signature = [
-      rec.name,
-      rec.designation,
-      rec.personal_email || "",
-      rec.phone
-    ].join("|");
-
-    // 🚫 Duplicate in same CSV → skip
-    if (seenSignatures.has(signature)) return;
-    seenSignatures.add(signature);
-
-    const existing = mergedDB.find(x =>
+    // 🔑 STRICT DUPLICATE CHECK
+    const duplicate = mergedDB.some(x =>
       x.name === rec.name &&
       x.designation === rec.designation &&
       (x.personal_email || "") === (rec.personal_email || "") &&
       x.phone === rec.phone
     );
 
-    if (existing) {
-      Object.assign(existing, rec);
-    } else {
-      mergedDB.push({
-        ...rec,
-        id: firstCleanImport
-          ? `UOL-${crypto.randomUUID()}`
-          : `UOL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
-      });
-    }
+    if (duplicate) return; // ❌ ignore completely
+
+    mergedDB.push({
+      ...rec,
+      id: firstCleanImport
+        ? `UOL-${crypto.randomUUID()}`
+        : `UOL-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    });
   });
 }
 
 /* =========================
-   RENDER – FLAT LIST
+   RENDER – FLAT
 ========================= */
 function renderAllCards() {
   const el = document.getElementById("directory");
   el.innerHTML = "";
-  mergedDB.forEach((r, i) => el.appendChild(createCard(r, i)));
+
+  mergedDB.forEach((r, i) => {
+    el.appendChild(createCard(r, i));
+  });
 }
 
 function createCard(r, index) {
@@ -179,12 +168,16 @@ function createCard(r, index) {
   card.className = "card";
 
   card.innerHTML = `
-    <div class="field text-xs text-gray-500">${r.campus} • ${r.department}</div>
+    <div class="field text-xs text-gray-500">
+      ${r.campus} • ${r.department}
+    </div>
+
     ${editable("Name", r, "name", index)}
     ${editable("Designation", r, "designation", index)}
     ${editable("Official Email", r, "official_email", index)}
     ${editable("Phone", r, "phone", index)}
     ${editable("Personal Email", r, "personal_email", index)}
+
     <div class="field">
       Status:
       <select data-index="${index}">
@@ -215,11 +208,7 @@ window.editField = (el, key, index) => {
   input.value = el.textContent;
 
   input.onblur = () => {
-    mergedDB[index][key] =
-      ["name", "designation", "campus", "department"].includes(key)
-        ? normalizeText(input.value)
-        : input.value.trim();
-
+    mergedDB[index][key] = input.value.trim();
     el.textContent = mergedDB[index][key];
     input.replaceWith(el);
   };
@@ -255,7 +244,9 @@ function exportJSON() {
 
 function exportCSV() {
   const headers = Object.keys(mergedDB[0]);
-  const rows = mergedDB.map(r => headers.map(h => r[h] ?? "").join(","));
+  const rows = mergedDB.map(r =>
+    headers.map(h => r[h] ?? "").join(",")
+  );
   download("UOL_Staff_Export.csv", [headers.join(","), ...rows].join("\n"));
 }
 
