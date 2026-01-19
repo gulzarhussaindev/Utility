@@ -4,17 +4,19 @@
 ====================== */
 
 /* ======================
-   UTIL: TITLE CASE
+   TEXT NORMALIZATION (IT SAFE)
 ====================== */
-function toTitleCase(str = "") {
+function normalizeText(str = "") {
   return str
     .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
+    .split(" ")
+    .map(w => (w === "it" ? "IT" : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ")
     .trim();
 }
 
 /* ======================
-   PWA INSTALL BUTTON
+   PWA INSTALL
 ====================== */
 let deferredInstallPrompt = null;
 const installBtn = document.getElementById("installBtn");
@@ -35,22 +37,14 @@ if (installBtn) {
   });
 }
 
-window.addEventListener("appinstalled", () => {
-  if (installBtn) installBtn.classList.add("hidden");
-});
-
 /* ======================
-   DATA & STATE
+   DATA
 ====================== */
 let allStaff = [];
 let activeCampus = null;
 let activeDepartment = "All";
-
 const searchInput = document.getElementById("searchInput");
 
-/* ======================
-   LOAD DATA
-====================== */
 fetch("data/staff.json")
   .then(res => res.json())
   .then(data => {
@@ -58,10 +52,10 @@ fetch("data/staff.json")
       .filter(p => p.active !== false)
       .map(p => ({
         ...p,
-        name: toTitleCase(p.name),
-        designation: toTitleCase(p.designation),
-        campus: toTitleCase(p.campus),
-        department: toTitleCase(p.department)
+        name: normalizeText(p.name),
+        designation: normalizeText(p.designation),
+        campus: normalizeText(p.campus),
+        department: normalizeText(p.department)
       }));
 
     initCampuses();
@@ -69,19 +63,16 @@ fetch("data/staff.json")
   });
 
 /* ======================
-   SEARCH CLEAR BUTTON
+   SEARCH CLEAR
 ====================== */
 function setupSearchClear() {
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
-
   searchInput.parentNode.insertBefore(wrapper, searchInput);
   wrapper.appendChild(searchInput);
 
   const clearBtn = document.createElement("button");
   clearBtn.innerHTML = "&times;";
-  clearBtn.setAttribute("aria-label", "Clear search");
-
   Object.assign(clearBtn.style, {
     position: "absolute",
     right: "14px",
@@ -100,14 +91,13 @@ function setupSearchClear() {
   };
 
   wrapper.appendChild(clearBtn);
-
   searchInput.addEventListener("input", () => {
     clearBtn.style.display = searchInput.value ? "block" : "none";
   });
 }
 
 /* ======================
-   CAMPUS TABS
+   CAMPUS / DEPARTMENT
 ====================== */
 function initCampuses() {
   const campuses = [...new Set(allStaff.map(p => p.campus))];
@@ -116,27 +106,16 @@ function initCampuses() {
 
   campuses.forEach((campus, i) => {
     const tab = document.createElement("button");
-
-    tab.className =
-      "px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition " +
-      (i === 0
-        ? "bg-uol-accent text-white shadow-md"
-        : "bg-slate-100 text-slate-600 hover:bg-slate-200");
-
     tab.textContent = campus;
+    tab.className =
+      "px-5 py-2.5 rounded-full text-sm font-medium transition " +
+      (i === 0
+        ? "bg-uol-accent text-white"
+        : "bg-slate-100 text-slate-600");
 
     tab.onclick = () => {
       activeCampus = campus;
       activeDepartment = "All";
-
-      document.querySelectorAll("#campusTabs button").forEach(b => {
-        b.className =
-          "px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition bg-slate-100 text-slate-600 hover:bg-slate-200";
-      });
-
-      tab.className =
-        "px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition bg-uol-accent text-white shadow-md";
-
       initDepartments();
     };
 
@@ -147,40 +126,22 @@ function initCampuses() {
   initDepartments();
 }
 
-/* ======================
-   DEPARTMENT PILLS
-====================== */
 function initDepartments() {
-  activeDepartment = "All";
-
   const pills = document.getElementById("departmentPills");
   pills.innerHTML = "";
 
   const staff = allStaff.filter(p => p.campus === activeCampus);
-  const departments = ["All", ...new Set(staff.map(p => p.department))];
+  const depts = ["All", ...new Set(staff.map(p => p.department))];
 
-  departments.forEach((dept, i) => {
+  depts.forEach((d, i) => {
     const pill = document.createElement("button");
-
+    pill.textContent = d;
     pill.className =
-      "px-4 py-1.5 rounded-full text-xs font-medium transition " +
-      (i === 0
-        ? "bg-uol-primary text-white"
-        : "bg-slate-100 text-slate-600 hover:bg-slate-200");
-
-    pill.textContent = dept;
+      "px-4 py-1.5 rounded-full text-xs font-medium " +
+      (i === 0 ? "bg-uol-primary text-white" : "bg-slate-100");
 
     pill.onclick = () => {
-      activeDepartment = dept;
-
-      document.querySelectorAll("#departmentPills button").forEach(b => {
-        b.className =
-          "px-4 py-1.5 rounded-full text-xs font-medium transition bg-slate-100 text-slate-600 hover:bg-slate-200";
-      });
-
-      pill.className =
-        "px-4 py-1.5 rounded-full text-xs font-medium transition bg-uol-primary text-white";
-
+      activeDepartment = d;
       applyFilters();
     };
 
@@ -191,7 +152,7 @@ function initDepartments() {
 }
 
 /* ======================
-   FILTERING
+   FILTER & RENDER
 ====================== */
 searchInput.addEventListener("input", applyFilters);
 
@@ -213,105 +174,29 @@ function applyFilters() {
     );
   }
 
-  filtered.sort((a, b) => a.name.localeCompare(b.name));
   render(filtered);
 }
 
-/* ======================
-   RENDER CARDS
-====================== */
 function render(list) {
-  const container = document.getElementById("directory");
-  container.innerHTML = "";
+  const el = document.getElementById("directory");
+  el.innerHTML = "";
 
   if (!list.length) {
-    container.innerHTML =
-      '<p class="col-span-full text-center text-slate-500">No records found</p>';
+    el.innerHTML = "<p>No records found</p>";
     return;
   }
 
   list.forEach(p => {
     const card = document.createElement("div");
-    card.className =
-      "group bg-white rounded-xl border border-gray-200 p-5 transition hover:-translate-y-1 hover:shadow-xl";
-
+    card.className = "card";
     card.innerHTML = `
-      <h3 class="text-lg font-semibold text-gray-900">${p.name}</h3>
-      <p class="text-sm font-medium text-uol-accent">${p.designation}</p>
-
-      <p class="mt-1 text-xs text-gray-500">
-        ${p.department} &bull; ${p.campus}
-      </p>
-
-      <div class="mt-4 space-y-2 text-sm text-gray-600">
-
-        <div class="flex justify-between gap-2">
-          <span>
-            <span class="text-gray-400 text-xs mr-1">Official:</span>
-            ${p.official_email}
-          </span>
-          <button class="copy-btn" onclick="copyText('${p.official_email}', this)">Copy</button>
-        </div>
-
-        ${
-          p.personal_email
-            ? `<div class="flex justify-between gap-2 text-xs text-gray-500">
-                 <span>
-                   <span class="text-gray-400 mr-1">Personal:</span>
-                   ${p.personal_email}
-                 </span>
-                 <button class="copy-btn" onclick="copyText('${p.personal_email}', this)">Copy</button>
-               </div>`
-            : ""
-        }
-
-        <div class="flex justify-between gap-2">
-          <span>
-            <span class="text-gray-400 text-xs mr-1">Phone:</span>
-            ${p.phone}
-          </span>
-          <button class="copy-btn" onclick="copyText('${p.phone}', this)">Copy</button>
-        </div>
-      </div>
+      <h3>${p.name}</h3>
+      <p>${p.designation}</p>
+      <p>${p.department} • ${p.campus}</p>
+      <p>${p.official_email}</p>
+      ${p.personal_email ? `<p>${p.personal_email}</p>` : ""}
+      <p>${p.phone}</p>
     `;
-
-    container.appendChild(card);
+    el.appendChild(card);
   });
-}
-
-/* ======================
-   COPY
-====================== */
-function copyText(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = "Copied";
-    btn.classList.add("copied");
-    setTimeout(() => {
-      btn.textContent = "Copy";
-      btn.classList.remove("copied");
-    }, 1200);
-  });
-}
-
-/* ======================
-   PWA UPDATE LISTENER
-====================== */
-if (navigator.serviceWorker) {
-  navigator.serviceWorker.addEventListener("message", event => {
-    if (event.data && event.data.type === "DATA_UPDATED") {
-      if (localStorage.getItem("uol_update_ack") === "true") return;
-      const banner = document.getElementById("updateBanner");
-      if (banner) {
-        banner.style.display = "flex";
-        localStorage.setItem("uol_update_ack", "true");
-      }
-    }
-  });
-}
-
-function handleUpdateRefresh() {
-  localStorage.removeItem("uol_update_ack");
-  const banner = document.getElementById("updateBanner");
-  if (banner) banner.style.display = "none";
-  location.reload();
 }
