@@ -1,5 +1,5 @@
 /* =========================================================
-   UOL Staff Directory – Admin Import Panel (SMART DIFF MODE)
+   UOL Staff Directory – Admin Import Panel (SMART DIFF v2)
    Author: Gulzar Hussain
 ========================================================= */
 
@@ -8,8 +8,8 @@ const REQUIRED_FILENAME = "UOL_Staff_Master.csv";
 /* =========================
    STATE
 ========================= */
-let existingDB = [];
-let diffView = []; // NEW + UPDATE only
+let db = [];
+let diffItems = [];
 let unlocked = false;
 
 /* =========================
@@ -19,17 +19,25 @@ const csvInput = document.getElementById("csvInput");
 const submitBtn = document.getElementById("submitBtn");
 const exportJsonBtn = document.getElementById("exportJsonBtn");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
+const activateAllBtn = document.getElementById("activateAllBtn");
+const deactivateAllBtn = document.getElementById("deactivateAllBtn");
 
 csvInput.addEventListener("change", handleUpload);
 submitBtn.addEventListener("click", handleSubmit);
 exportJsonBtn.addEventListener("click", exportJSON);
 exportCsvBtn.addEventListener("click", exportCSV);
+activateAllBtn.addEventListener("click", () => bulkStatus(true));
+deactivateAllBtn.addEventListener("click", () => bulkStatus(false));
 
 /* =========================
-   IMPORT NORMALIZATION ONLY
+   NORMALIZATION (FOR COMPARE ONLY)
 ========================= */
-function normalize(str = "") {
-  return str.trim();
+function norm(str = "") {
+  return str
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* =========================
@@ -39,9 +47,9 @@ async function loadDB() {
   try {
     const res = await fetch("data/staff.json");
     const data = await res.json();
-    existingDB = Array.isArray(data) ? data : [];
+    db = Array.isArray(data) ? data : [];
   } catch {
-    existingDB = [];
+    db = [];
   }
 }
 
@@ -66,6 +74,8 @@ async function handleUpload() {
     submitBtn.disabled = false;
     exportJsonBtn.classList.remove("hidden");
     exportCsvBtn.classList.remove("hidden");
+    activateAllBtn.classList.remove("hidden");
+    deactivateAllBtn.classList.remove("hidden");
 
     document.getElementById("uploadGate").classList.add("hidden");
     document.getElementById("adminApp").classList.remove("hidden");
@@ -78,11 +88,10 @@ async function handleUpload() {
 }
 
 /* =========================
-   DIFF ENGINE
+   BUILD DIFF
 ========================= */
 function buildDiff(rows) {
-  if (rows.length < 2) triggerInternalError();
-  diffView = [];
+  diffItems = [];
 
   const headers = rows[0].map(h => h.trim().toLowerCase());
   const idx = n => headers.indexOf(n);
@@ -101,93 +110,104 @@ function buildDiff(rows) {
     if (idx(c) === -1) triggerInternalError();
   });
 
-  const seenCSV = new Set();
+  const seen = new Set();
 
   rows.slice(1).forEach(r => {
     if (!r || r.length < headers.length) return;
 
-    const rec = {
-      campus: normalize(r[idx("campus")]),
-      department: normalize(r[idx("department")]),
-      name: normalize(r[idx("full name")]),
-      designation: normalize(r[idx("designation")]),
-      official_email: normalize(r[idx("official email")]),
-      phone: normalize(r[idx("phone")]),
-      personal_email: normalize(r[idx("personal email")])
+    const csvRec = {
+      campus: r[idx("campus")]?.trim() || "",
+      department: r[idx("department")]?.trim() || "",
+      name: r[idx("full name")]?.trim() || "",
+      designation: r[idx("designation")]?.trim() || "",
+      official_email: r[idx("official email")]?.trim() || "",
+      phone: r[idx("phone")]?.trim() || "",
+      personal_email: r[idx("personal email")]?.trim() || ""
     };
 
-    if (!rec.name || !rec.phone) return;
+    if (!csvRec.name || !csvRec.phone) return;
 
     const signature = [
-      rec.name,
-      rec.designation,
-      rec.personal_email,
-      rec.phone
+      norm(csvRec.name),
+      norm(csvRec.designation),
+      norm(csvRec.personal_email),
+      norm(csvRec.phone)
     ].join("|");
 
-    if (seenCSV.has(signature)) return;
-    seenCSV.add(signature);
+    if (seen.has(signature)) return;
+    seen.add(signature);
 
-    const dbMatch = existingDB.find(x =>
-      x.name === rec.name &&
-      x.designation === rec.designation &&
-      (x.personal_email || "") === rec.personal_email &&
-      x.phone === rec.phone
+    const dbMatch = db.find(d =>
+      norm(d.name) === norm(csvRec.name) &&
+      norm(d.designation) === norm(csvRec.designation) &&
+      norm(d.personal_email || "") === norm(csvRec.personal_email) &&
+      norm(d.phone) === norm(csvRec.phone)
     );
 
     if (!dbMatch) {
-      diffView.push({
+      diffItems.push({
         type: "NEW",
-        newData: rec
+        data: {
+          ...csvRec,
+          active: true
+        }
       });
       return;
     }
 
     const changes = {};
     ["campus", "department", "official_email"].forEach(k => {
-      if ((dbMatch[k] || "") !== (rec[k] || "")) {
+      if (norm(dbMatch[k] || "") !== norm(csvRec[k] || "")) {
         changes[k] = {
           from: dbMatch[k] || "",
-          to: rec[k] || ""
+          to: csvRec[k] || ""
         };
       }
     });
 
     if (Object.keys(changes).length) {
-      diffView.push({
+      diffItems.push({
         type: "UPDATE",
-        oldData: dbMatch,
-        newData: rec,
+        dbRef: dbMatch,
+        data: { ...dbMatch, ...csvRec },
         changes,
-        apply: true // ✅ checkbox default
+        apply: true
       });
     }
   });
 }
 
 /* =========================
-   RENDER DIFF
+   RENDER
 ========================= */
 function renderDiff() {
   const el = document.getElementById("directory");
   el.innerHTML = "";
 
-  if (!diffView.length) {
+  if (!diffItems.length) {
     el.innerHTML =
-      "<p style='text-align:center'>No new or updated records found</p>";
+      "<p style='text-align:center'>No new or updated records</p>";
     return;
   }
 
-  diffView.forEach((item, i) => {
+  diffItems.forEach((item, i) => {
     const card = document.createElement("div");
     card.className = "card";
+
+    const statusSelect = `
+      <select data-status="${i}">
+        <option value="true" ${item.data.active ? "selected" : ""}>Active</option>
+        <option value="false" ${!item.data.active ? "selected" : ""}>Inactive</option>
+      </select>
+    `;
 
     if (item.type === "NEW") {
       card.innerHTML = `
         <div class="badge new">NEW</div>
-        <strong>${item.newData.name}</strong>
-        <div>${item.newData.designation}</div>
-        <div>${item.newData.department} • ${item.newData.campus}</div>
+        <strong>${item.data.name}</strong>
+        <div>${item.data.designation}</div>
+        <div>${item.data.department} • ${item.data.campus}</div>
+        <div>Status: ${statusSelect}</div>
       `;
     }
 
@@ -195,28 +215,40 @@ function renderDiff() {
       const diffs = Object.entries(item.changes)
         .map(
           ([k, v]) =>
-            `<div class="diff">${k}: <span>${v.from}</span> → <strong>${v.to}</strong></div>`
+            `<div class="diff">${k}: ${v.from} → <strong>${v.to}</strong></div>`
         )
         .join("");
 
       card.innerHTML = `
-        <label style="display:flex;gap:8px;align-items:center">
-          <input type="checkbox" checked data-index="${i}">
+        <label>
+          <input type="checkbox" checked data-apply="${i}">
           <span class="badge update">UPDATE</span>
         </label>
-
-        <strong>${item.newData.name}</strong>
-        <div>${item.newData.designation}</div>
+        <strong>${item.data.name}</strong>
+        <div>${item.data.designation}</div>
         ${diffs}
+        <div>Status: ${statusSelect}</div>
       `;
 
-      card.querySelector("input").onchange = e => {
-        diffView[i].apply = e.target.checked;
+      card.querySelector(`[data-apply="${i}"]`).onchange = e => {
+        item.apply = e.target.checked;
       };
     }
 
+    card.querySelector(`[data-status="${i}"]`).onchange = e => {
+      item.data.active = e.target.value === "true";
+    };
+
     el.appendChild(card);
   });
+}
+
+/* =========================
+   BULK STATUS
+========================= */
+function bulkStatus(value) {
+  diffItems.forEach(i => (i.data.active = value));
+  renderDiff();
 }
 
 /* =========================
@@ -226,17 +258,16 @@ function handleSubmit() {
   if (!unlocked) return;
   if (!confirm("Apply selected changes?")) return;
 
-  diffView.forEach(item => {
+  diffItems.forEach(item => {
     if (item.type === "NEW") {
-      existingDB.push({
-        ...item.newData,
-        active: true,
+      db.push({
+        ...item.data,
         id: `UOL-${crypto.randomUUID()}`
       });
     }
 
     if (item.type === "UPDATE" && item.apply) {
-      Object.assign(item.oldData, item.newData);
+      Object.assign(item.dbRef, item.data);
     }
   });
 
@@ -247,12 +278,12 @@ function handleSubmit() {
    EXPORT
 ========================= */
 function exportJSON() {
-  download("staff.json", JSON.stringify(existingDB, null, 2));
+  download("staff.json", JSON.stringify(db, null, 2));
 }
 
 function exportCSV() {
-  const headers = Object.keys(existingDB[0]);
-  const rows = existingDB.map(r =>
+  const headers = Object.keys(db[0]);
+  const rows = db.map(r =>
     headers.map(h => r[h] ?? "").join(",")
   );
   download("UOL_Staff_Export.csv", [headers.join(","), ...rows].join("\n"));
