@@ -320,9 +320,9 @@
   },
   {
     "campus": "Kargil Campus",
-    "department": "Faculties",
+    "department": "Support Staff",
     "name": "Zainul Abideen",
-    "designation": "Laboratory Assistant",
+    "designation": "Laboratory assistant",
     "official_email": "zainul.abideen@uol.ac.in",
     "phone": "8968802981",
     "personal_email": "Zainabee4@gmail.com",
@@ -463,7 +463,7 @@
   },
   {
     "campus": "SAS&T Kargil",
-    "department": "Faculties",
+    "department": "Support Staff",
     "name": "Mohammad Towha",
     "designation": "Field Cum Laboratory Assistant",
     "official_email": "deansastkgl@uol.ac.in",
@@ -474,7 +474,7 @@
   },
   {
     "campus": "SAS&T Kargil",
-    "department": "Faculties",
+    "department": "Support Staff",
     "name": "Nissar Hussain",
     "designation": "Driver",
     "official_email": "deansastkgl@uol.ac.in",
@@ -680,5 +680,71 @@
     "personal_email": "tundupmepam@gmail.com",
     "active": true,
     "id": "UOL-05909d06-676e-4c4b-9f9a-6fc5f2062e8c"
+  },
+  {
+    "campus": "Leh Campus",
+    "department": "IT Admission Cell",
+    "name": "Stanzin Dolkar",
+    "designation": "Office bearer",
+    "official_email": "deanacademicaffairs@uol.ac.in",
+    "phone": "9622374969",
+    "personal_email": "dstanzin68@gmail.com",
+    "active": true,
+    "id": "UOL-ce4ba49a-6c6a-49b5-b4fc-d810be72f5b0"
+  },
+  {
+    "campus": "Leh Campus",
+    "department": "Registrar Office",
+    "name": "Konchok Tundup",
+    "designation": "Jr. Network Engineer",
+    "official_email": "konchok.tundup@uol.ac.in",
+    "phone": "8493841651",
+    "personal_email": "kontungcet@gmai.com",
+    "active": true,
+    "id": "UOL-3b366917-79d0-4aae-aa1c-79fe86e1b999"
+  },
+  {
+    "campus": "Kargil Campus",
+    "department": "Incharge Administration Office",
+    "name": "Mehboob Ali",
+    "designation": "Sr Assistant Professor",
+    "official_email": "mehboob.ali@uol.ac.in",
+    "phone": "9469466640",
+    "personal_email": "",
+    "active": true,
+    "id": "UOL-99c2419f-e91d-4b1b-8ec3-72d6ea83b775"
+  },
+  {
+    "campus": "Kargil Campus",
+    "department": "Faculties",
+    "name": "Anwar Hussain",
+    "designation": "Assistant Professor",
+    "official_email": "anwar001@uol.ac.in",
+    "phone": "8082756195",
+    "personal_email": "anwar2raj@gmail.com",
+    "active": true,
+    "id": "UOL-f98e8cc4-e6bd-4e67-8c27-d0e19dbadeeb"
+  },
+  {
+    "campus": "Leh Campus",
+    "department": "Finance & Accounts",
+    "name": "Nawaz Ali",
+    "designation": "Assistant Registrar",
+    "official_email": "nawazaliar@uol.ac.in",
+    "phone": "8082793268",
+    "personal_email": "nawazalijafaree@gmaiil.com",
+    "active": true,
+    "id": "UOL-75f02c29-f5ed-4e16-a001-7ec41d99d867"
+  },
+  {
+    "campus": "Leh Campus",
+    "department": "Registrar Office",
+    "name": "Jigmet Chondol",
+    "designation": "Assistant Registrar",
+    "official_email": "arjigmet@uol.ac.in",
+    "phone": "6005080477",
+    "personal_email": "chondoljigmet7@gmail.com",
+    "active": true,
+    "id": "UOL-515da1dc-6c46-4214-a3a7-f879434b01f1"
   }
 ]
